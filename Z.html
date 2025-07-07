@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>前後搖動次數遊戲</title>
+<style>
+  body {
+    font-family: "微軟正黑體", sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+    color: #333;
+    user-select: none;
+  }
+  h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+  #count {
+    font-size: 6rem;
+    font-weight: bold;
+  }
+  #info {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: #555;
+  }
+  button {
+    margin-top: 2rem;
+    padding: 0.8rem 1.5rem;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #4a90e2;
+    color: white;
+    cursor: pointer;
+  }
+  button:active {
+    background-color: #357ABD;
+  }
+</style>
+</head>
+<body>
+
+<h1>你前後搖動了手機</h1>
+<div id="count">0</div>
+<div id="info">請前後搖動你的手機</div>
+<button id="resetBtn">重置計數</button>
+
+<script>
+  let moveCount = 0;
+  const countEl = document.getElementById('count');
+  const infoEl = document.getElementById('info');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const THRESHOLD = 12; // 閾值（可調整），越小越敏感
+  let lastZ = null;
+  let lastTime = 0;
+
+  function onDeviceMotion(event) {
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const currentTime = Date.now();
+    if ((currentTime - lastTime) < 300) return; // 限制更新頻率
+
+    if (lastZ !== null) {
+      const deltaZ = Math.abs(acc.z - lastZ);
+
+      if (deltaZ > THRESHOLD) {
+        moveCount++;
+        countEl.textContent = moveCount;
+      }
+    }
+
+    lastZ = acc.z;
+    lastTime = currentTime;
+  }
+
+  function requestPermission() {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(state => {
+          if (state === 'granted') {
+            window.addEventListener('devicemotion', onDeviceMotion);
+            infoEl.textContent = '開始前後搖動手機吧！';
+          } else {
+            infoEl.textContent = '需要裝置動作權限才能玩';
+          }
+        })
+        .catch(() => {
+          infoEl.textContent = '權限請求失敗';
+        });
+    } else {
+      window.addEventListener('devicemotion', onDeviceMotion);
+      infoEl.textContent = '開始前後搖動手機吧！';
+    }
+  }
+
+  resetBtn.addEventListener('click', () => {
+    moveCount = 0;
+    countEl.textContent = moveCount;
+  });
+
+  infoEl.addEventListener('click', requestPermission);
+  resetBtn.addEventListener('click', e => e.stopPropagation());
+
+  infoEl.style.cursor = 'pointer';
+  infoEl.textContent = '點擊此處，開始前後搖動手機';
+
+</script>
+
+</body>
+</html>
