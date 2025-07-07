@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>搖動次數遊戲</title>
+<style>
+  body {
+    font-family: "微軟正黑體", sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+    color: #333;
+    user-select: none;
+  }
+  h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+  #count {
+    font-size: 6rem;
+    font-weight: bold;
+  }
+  #info {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: #555;
+  }
+  button {
+    margin-top: 2rem;
+    padding: 0.8rem 1.5rem;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #4a90e2;
+    color: white;
+    cursor: pointer;
+  }
+  button:active {
+    background-color: #357ABD;
+  }
+</style>
+</head>
+<body>
+
+<h1>你搖了手機</h1>
+<div id="count">0</div>
+<div id="info">請搖動你的手機</div>
+<button id="resetBtn">重置計數</button>
+
+<script>
+  let shakeCount = 0;
+  const countEl = document.getElementById('count');
+  const infoEl = document.getElementById('info');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // 搖動偵測設定
+  const SHAKE_THRESHOLD = 15; // 加速度閾值，越小越敏感
+  let lastX = null;
+  let lastY = null;
+  let lastZ = null;
+  let lastTime = 0;
+
+  function onDeviceMotion(event) {
+    const acceleration = event.accelerationIncludingGravity;
+    if (!acceleration) return;
+
+    const currentTime = Date.now();
+    if ((currentTime - lastTime) < 300) return; // 限制頻率
+
+    let deltaX = 0, deltaY = 0, deltaZ = 0;
+    if (lastX !== null) {
+      deltaX = Math.abs(acceleration.x - lastX);
+      deltaY = Math.abs(acceleration.y - lastY);
+      deltaZ = Math.abs(acceleration.z - lastZ);
+
+      if ((deltaX > SHAKE_THRESHOLD) || (deltaY > SHAKE_THRESHOLD) || (deltaZ > SHAKE_THRESHOLD)) {
+        shakeCount++;
+        countEl.textContent = shakeCount;
+      }
+    }
+
+    lastX = acceleration.x;
+    lastY = acceleration.y;
+    lastZ = acceleration.z;
+    lastTime = currentTime;
+  }
+
+  // 取得 DeviceMotion 權限（iOS 13+需要）
+  function requestPermission() {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('devicemotion', onDeviceMotion);
+            infoEl.textContent = '請開始搖動手機！';
+          } else {
+            infoEl.textContent = '需要允許裝置動作權限才能玩此遊戲';
+          }
+        })
+        .catch(() => {
+          infoEl.textContent = '裝置動作權限請求失敗';
+        });
+    } else {
+      // 非 iOS 13+ 瀏覽器直接監聽
+      window.addEventListener('devicemotion', onDeviceMotion);
+      infoEl.textContent = '請開始搖動手機！';
+    }
+  }
+
+  resetBtn.addEventListener('click', () => {
+    shakeCount = 0;
+    countEl.textContent = shakeCount;
+  });
+
+  // 點擊畫面請求權限（iOS）
+  infoEl.addEventListener('click', requestPermission);
+  resetBtn.addEventListener('click', e => e.stopPropagation());
+
+  // 初始提示，點擊 info 文字開始
+  infoEl.style.cursor = 'pointer';
+  infoEl.textContent = '點擊此處，開始搖動手機';
+
+</script>
+
+</body>
+</html>
