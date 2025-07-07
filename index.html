@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>搖動次數遊戲</title>
+<title>搖動次數遊戲＋抽獎</title>
 <style>
   body {
     font-family: "微軟正黑體", sans-serif;
@@ -29,6 +29,13 @@
     margin-top: 1rem;
     font-size: 1.2rem;
     color: #555;
+    cursor: pointer;
+  }
+  #result {
+    margin-top: 1rem;
+    font-size: 1.5rem;
+    color: #b22;
+    font-weight: bold;
   }
   button {
     margin-top: 2rem;
@@ -49,14 +56,21 @@
 
 <h1>你搖了手機</h1>
 <div id="count">0</div>
-<div id="info">請搖動你的手機</div>
+<div id="info">點擊此處，開始搖動手機</div>
+<div id="result"></div>
 <button id="resetBtn">重置計數</button>
 
 <script>
   let shakeCount = 0;
   const countEl = document.getElementById('count');
   const infoEl = document.getElementById('info');
+  const resultEl = document.getElementById('result');
   const resetBtn = document.getElementById('resetBtn');
+
+  // 抽獎相關
+  let lastDraw10 = 0;   // 紀錄上次用10點抽獎的搖動數
+  let lastDraw100 = 0;  // 紀錄上次用100點連抽的搖動數
+  let gameOver = false;
 
   // 搖動偵測設定
   const SHAKE_THRESHOLD = 15; // 加速度閾值，越小越敏感
@@ -65,7 +79,47 @@
   let lastZ = null;
   let lastTime = 0;
 
+  function checkDraw() {
+    if (gameOver) return;
+
+    // 先判斷是否可十一連抽（每100點）
+    while (shakeCount - lastDraw100 >= 100) {
+      lastDraw100 += 100;
+      // 十一連抽：11次抽獎
+      let won = false;
+      for(let i=0; i<11; i++) {
+        if (Math.random() < 0.01) { // 1%中獎機率
+          won = true;
+          break;
+        }
+      }
+      if (won) {
+        gameOver = true;
+        resultEl.textContent = `恭喜中獎！你使用了 ${lastDraw100} 點抽出大獎！遊戲結束。`;
+        infoEl.textContent = '遊戲結束，請重置重新開始';
+        return;
+      } else {
+        resultEl.textContent = `使用${lastDraw100}點十一連抽，未中獎。`;
+      }
+    }
+
+    // 再判斷是否可單次抽獎（每10點）
+    while (shakeCount - lastDraw10 >= 10) {
+      lastDraw10 += 10;
+      if (Math.random() < 0.01) { // 1%中獎機率
+        gameOver = true;
+        resultEl.textContent = `恭喜中獎！你使用了 ${lastDraw10} 點抽出大獎！遊戲結束。`;
+        infoEl.textContent = '遊戲結束，請重置重新開始';
+        return;
+      } else {
+        resultEl.textContent = `使用${lastDraw10}點抽獎，未中獎。`;
+      }
+    }
+  }
+
   function onDeviceMotion(event) {
+    if (gameOver) return;
+
     const acceleration = event.accelerationIncludingGravity;
     if (!acceleration) return;
 
@@ -81,6 +135,7 @@
       if ((deltaX > SHAKE_THRESHOLD) || (deltaY > SHAKE_THRESHOLD) || (deltaZ > SHAKE_THRESHOLD)) {
         shakeCount++;
         countEl.textContent = shakeCount;
+        checkDraw();
       }
     }
 
@@ -114,17 +169,23 @@
 
   resetBtn.addEventListener('click', () => {
     shakeCount = 0;
+    lastDraw10 = 0;
+    lastDraw100 = 0;
+    gameOver = false;
     countEl.textContent = shakeCount;
+    resultEl.textContent = '';
+    infoEl.textContent = '點擊此處，開始搖動手機';
+    lastX = lastY = lastZ = null;
+    lastTime = 0;
   });
 
-  // 點擊畫面請求權限（iOS）
+  // 點擊 info 文字請求權限（iOS）
   infoEl.addEventListener('click', requestPermission);
   resetBtn.addEventListener('click', e => e.stopPropagation());
 
   // 初始提示，點擊 info 文字開始
   infoEl.style.cursor = 'pointer';
   infoEl.textContent = '點擊此處，開始搖動手機';
-
 </script>
 
 </body>
